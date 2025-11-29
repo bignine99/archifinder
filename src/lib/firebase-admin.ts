@@ -66,20 +66,41 @@ const resolveServiceAccount = (): admin.ServiceAccount | null => {
   return null;
 };
 
+const resolveStorageBucket = (
+  serviceAccount: admin.ServiceAccount | null
+): string | undefined => {
+  const candidates = [
+    process.env.FIREBASE_STORAGE_BUCKET,
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    serviceAccount?.projectId
+      ? `${serviceAccount.projectId}.appspot.com`
+      : undefined,
+  ].filter(Boolean) as string[];
+
+  const bucket = candidates[0];
+  if (!bucket) {
+    console.warn(
+      'FIREBASE_ADMIN: storageBucket 환경 변수가 없어 기본 버킷을 설정할 수 없습니다.'
+    );
+  }
+  return bucket;
+};
+
 if (!admin.apps.length) {
   try {
     const serviceAccount = resolveServiceAccount();
+    const storageBucket = resolveStorageBucket(serviceAccount);
 
     if (serviceAccount) {
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+        storageBucket,
       });
       console.info('FIREBASE_ADMIN: 서비스 계정으로 초기화 완료');
     } else if (process.env.NODE_ENV !== 'production') {
       admin.initializeApp({
         credential: admin.credential.applicationDefault(),
-        storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+        storageBucket,
       });
       console.info('FIREBASE_ADMIN: 로컬 기본 자격증명으로 초기화');
     } else {

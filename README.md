@@ -1,6 +1,7 @@
 # Firebase Studio
 
-This is a Next.js application built within Firebase Studio. It serves as a visual architecture finder and concept extraction tool for architectural projects.
+This is a Next.js application built within Firebase Studio. It serves as a visual architecture finder and concept extraction tool for architectural projects. test
+
 
 Key Features:
 - **Project Visualization:** Browse and view architectural projects with associated metadata and images.
@@ -16,9 +17,11 @@ Firebase Admin SDK는 서버 환경에서만 실행되며, `FIREBASE_SERVICE_ACC
 - `FIREBASE_PROJECT_ID`
 - `FIREBASE_CLIENT_EMAIL`
 - `FIREBASE_PRIVATE_KEY` (`\n`을 실제 줄바꿈으로 치환)
-- (선택) `FIREBASE_STORAGE_BUCKET`
+- `FIREBASE_STORAGE_BUCKET` (예: `archifinder-43864.appspot.com`)
 
 Vercel에서는 멀티라인 비밀키를 그대로 붙이지 말고 `\n`이 포함된 문자열로 저장하거나, JSON 전체를 `FIREBASE_SERVICE_ACCOUNT`에 넣어주세요. 새 초기화 로직이 Base64(`FIREBASE_SERVICE_ACCOUNT_BASE64`)와 JSON 문자열(`GOOGLE_APPLICATION_CREDENTIALS_JSON`)도 자동으로 감지합니다. 로컬 개발에서 gcloud/emu를 사용 중이라면 별도 설정 없이 기본 ADC로 동작합니다.
+
+`FIREBASE_STORAGE_BUCKET`을 명시하지 않으면 서비스 계정의 `project_id`를 기준으로 `<project_id>.appspot.com` 형태를 자동으로 시도하지만, 실제 사용 중인 버킷이 다르다면 반드시 환경 변수에서 정확한 버킷 이름을 지정해야 합니다.
 
 # Firebase Studio (한국어)
 
