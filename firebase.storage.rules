@@ -1,0 +1,15 @@
+rules_version = '2';
+
+// 이 규칙은 Cloud Storage 버킷에 대한 보안을 강화합니다.
+// 모든 클라이언트 측 읽기 및 쓰기 요청을 명시적으로 거부합니다.
+// 앱은 Firebase Admin SDK를 사용하여 서버에서 생성된 서명된 URL을 통해
+// 파일에 액세스하므로 클라이언트의 직접적인 읽기 액세스가 필요하지 않습니다.
+// 이렇게 하면 인증되지 않은 사용자가 버킷의 내용을 탐색하거나 수정하는 것을 방지할 수 있습니다.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      // 모든 클라이언트의 직접적인 읽기 및 쓰기를 허용하지 않습니다.
+      allow read, write: if false;
+    }
+  }
+}

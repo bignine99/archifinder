@@ -1,0 +1,38 @@
+# Dependencies
+/node_modules
+
+# Next.js build output
+/.next/
+
+# Production build
+/build
+
+# Static exports
+/out/
+
+# Environment variables
+.env
+.env*.local
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor directories and files
+.vscode
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Firebase / Google Cloud
+# VERY IMPORTANT: This key provides admin access. NEVER commit it.
+serviceAccountKey.json
+
+# Operating System files
+.DS_Store
+Thumbs.db

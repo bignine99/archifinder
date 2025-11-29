@@ -1,0 +1,170 @@
+
+'use strict';
+/**
+ * @fileOverview Script to import project metadata from a CSV file into Firestore.
+ */
+import fs from 'fs';
+import path from 'path';
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import csv from 'csv-parser';
+
+// --- Configuration ---
+const SERVICE_ACCOUNT_PATH = path.join(process.cwd(), 'workspace', 'serviceAccountKey.json');
+const CSV_FILE_PATH = path.join(process.cwd(), 'workspace', 'metadata.csv');
+const FIRESTORE_COLLECTION = 'projects';
+const BATCH_SIZE = 500; // Firestore batch writes are limited to 500 operations.
+
+// --- Helper Functions ---
+
+/**
+ * Checks if the required files exist.
+ * @returns {boolean} True if all files are found, otherwise false.
+ */
+function checkRequiredFiles() {
+  if (!fs.existsSync(SERVICE_ACCOUNT_PATH)) {
+    console.error(`❌ Error: Service account key not found at ${SERVICE_ACCOUNT_PATH}`);
+    console.error('Please download it from Firebase Console > Project Settings > Service accounts and save it as "serviceAccountKey.json" in your workspace directory.');
+    return false;
+  }
+  if (!fs.existsSync(CSV_FILE_PATH)) {
+    console.error(`❌ Error: CSV file not found at ${CSV_FILE_PATH}`);
+    console.error('Please ensure your "metadata.csv" file is in your workspace directory.');
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Initializes Firebase Admin SDK.
+ */
+function initializeFirebase() {
+  const serviceAccount = JSON.parse(fs.readFileSync(SERVICE_ACCOUNT_PATH, 'utf8'));
+  initializeApp({
+    credential: cert(serviceAccount),
+  });
+  console.log('🔥 Firebase Admin SDK initialized.');
+}
+
+/**
+ * Parses a string value from CSV into a number. Returns 0 if invalid.
+ * @param {string} value The string value to parse.
+ * @returns {number} The parsed number or 0.
+ */
+function parseNumber(value) {
+  if (value === null || value === undefined || value.trim() === '') return 0;
+  const num = Number(value);
+  return isNaN(num) ? 0 : num;
+}
+
+/**
+ * Transforms a CSV row into a Firestore document object.
+ * @param {object} row A single row object from the CSV parser.
+ * @returns {object} A Firestore document object.
+ */
+function transformRowToDoc(row) {
+  // Map CSV column names (in Korean) to Firestore document fields (in English).
+  return {
+    id: row['고유번호'],
+    name: row['프로젝트'] || '',
+    location: row['지역'] || '',
+    address: row['주소'] || '',
+    projectType: row['용도'] || '기타',
+    areaType: row['지역2'] || '기타지역',
+    siteArea: parseNumber(row['대지면적']),
+    buildingArea: parseNumber(row['건축면적']),
+    totalFloorArea: parseNumber(row['연면적']),
+    buildingCoverageRatio: parseNumber(row['건폐율']),
+    floorAreaRatio: parseNumber(row['용적률']),
+    storiesAboveGround: parseNumber(row['지상층수']),
+    storiesBelowGround: parseNumber(row['지하층수']),
+    structureType: row['구조'] || '',
+    internalFinish: row['내부마감'] || '',
+    externalFinish: row['외부마감'] || '',
+    description: row['설계개념'] || '',
+    // --- Default values for fields not in CSV ---
+    designConcepts: [], // To be populated by AI later
+    files: [], // To be populated by another script or manually
+    createdAt: new Date(),
+  };
+}
+
+
+/**
+ * Main function to run the import process.
+ */
+async function main() {
+  console.log('🚀 Starting Firestore data import...');
+  if (!checkRequiredFiles()) {
+    process.exit(1);
+  }
+
+  try {
+    initializeFirebase();
+    const db = getFirestore();
+    const projects = [];
+
+    // 1. Read and parse the CSV file
+    await new Promise((resolve, reject) => {
+      // 파서 인스턴스를 변수에 저장하여 rawRowCount에 접근할 수 있도록 합니다.
+      const parser = csv({ headers: true }); // <<< { headers: true } 옵션을 추가합니다.
+      fs.createReadStream(CSV_FILE_PATH)
+        .pipe(parser) // 변수에 저장된 파서 사용
+        .on('data', (row) => {
+          console.log('DEBUG: Parsed row:', row); // 파싱된 행 객체 로그
+          console.log('DEBUG: Value of 고유번호:', row['고유번호']); // <-- '고유번호' 값 직접 출력
+          
+          // '고유번호' 키가 객체에 직접 존재하는지, 그리고 값이 비어있지 않은지 확인
+          if (row && Object.prototype.hasOwnProperty.call(row, '고유번호') && row['고유번호'] && row['고유번호'].trim() !== '') { 
+            const projectDoc = transformRowToDoc(row);
+            projects.push(projectDoc);
+          } else {
+            console.log('DEBUG: Skipping row (no valid or empty 고유번호):', row); // 유효하지 않거나 고유번호가 비어있는 행 로그
+          }
+        })
+        .on('end', () => {
+          // parser.rawRowCount 대신 projects 배열 길이로 총 행 수를 추정
+          console.log(`DEBUG: Estimated total rows processed: ${projects.length + (parser.rawRowCount || 0)}`); // rawRowCount가 undefined일 경우 0으로 처리
+          console.log(`DEBUG: Projects array length after processing: ${projects.length}`);
+          console.log(`✅ CSV file successfully processed. Found ${projects.length} projects.`);
+          resolve();
+        })
+        .on('error', reject);
+    });
+
+    if (projects.length === 0) {
+      console.warn('⚠️ No projects found in CSV file. Exiting.');
+      return;
+    }
+
+    // 2. Write data to Firestore in batches
+    const collectionRef = db.collection(FIRESTORE_COLLECTION);
+    let committedCount = 0;
+
+    for (let i = 0; i < projects.length; i += BATCH_SIZE) {
+      const batch = db.batch();
+      const chunk = projects.slice(i, i + BATCH_SIZE);
+nano scripts/import-data.mjs
+
+      chunk.forEach((project) => {
+        // Use the '고유번호' as the document ID for easy lookup
+        const docRef = collectionRef.doc(project.id);
+        batch.set(docRef, project);
+      });
+
+      await batch.commit();
+      committedCount += chunk.length;
+      console.log(`...Committed ${committedCount} of ${projects.length} projects to Firestore.`);
+    }
+
+    console.log('\n✅ Import complete!');
+    
+  } catch (error) {
+    console.error('\n❌ An error occurred during the import process:');
+    console.error(error);
+    process.exit(1);
+  }
+}
+
+main();
+프로젝트 탐색기에서 scripts 폴더 안에 있는 import-data.mjs 파일
