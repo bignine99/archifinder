@@ -9,6 +9,17 @@ Key Features:
 
 To understand the core structure and how to get started, explore `/src/app/page.tsx`.
 
+## Firebase Admin 환경 변수 설정 (Vercel 포함)
+
+Firebase Admin SDK는 서버 환경에서만 실행되며, `FIREBASE_SERVICE_ACCOUNT` 또는 다음 키 조합을 반드시 설정해야 합니다.
+
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_CLIENT_EMAIL`
+- `FIREBASE_PRIVATE_KEY` (`\n`을 실제 줄바꿈으로 치환)
+- (선택) `FIREBASE_STORAGE_BUCKET`
+
+Vercel에서는 멀티라인 비밀키를 그대로 붙이지 말고 `\n`이 포함된 문자열로 저장하거나, JSON 전체를 `FIREBASE_SERVICE_ACCOUNT`에 넣어주세요. 새 초기화 로직이 Base64(`FIREBASE_SERVICE_ACCOUNT_BASE64`)와 JSON 문자열(`GOOGLE_APPLICATION_CREDENTIALS_JSON`)도 자동으로 감지합니다. 로컬 개발에서 gcloud/emu를 사용 중이라면 별도 설정 없이 기본 ADC로 동작합니다.
+
 # Firebase Studio (한국어)
 
 이 프로젝트는 Firebase Studio 내에서 구축된 Next.js 애플리케이션입니다. 건축 프로젝트를 위한 시각적 건축 검색 및 콘셉트 추출 도구 역할을 합니다.
